@@ -79,19 +79,51 @@ prettyDate zone time =
     h ++ ":" ++ m
 
 
+normaliseTime : Int -> Int -> Int
+normaliseTime max value =
+    if value < 0 then
+        max + value
+
+    else
+        value
+
+
 timeLeft : HMS -> HMS -> HMS
 timeLeft currentTime targetTime =
     let
-        h =
-            targetTime.hour - currentTime.hour
-
-        m =
-            targetTime.minute - currentTime.minute
-
         s =
             targetTime.second - currentTime.second
+
+        normalizedSecond =
+            normaliseTime 60 s
+
+        m =
+            targetTime.minute
+                - currentTime.minute
+                - (if s < 0 then
+                    1
+
+                   else
+                    0
+                  )
+
+        normalizedMinute =
+            normaliseTime 60 m
+
+        h =
+            targetTime.hour
+                - currentTime.hour
+                - (if m < 0 then
+                    1
+
+                   else
+                    0
+                  )
+
+        normalizedHour =
+            normaliseTime 24 h
     in
-    HMS h m s
+    HMS normalizedHour normalizedMinute normalizedSecond
 
 
 prettyHMS : HMS -> String
