@@ -1,7 +1,9 @@
 module Main exposing (Model, initialModel, main)
 
 import Browser exposing (Document)
-import Html exposing (text)
+import Css exposing (..)
+import Css.Global exposing (body, global)
+import Html.Styled exposing (Attribute, Html, div, p, styled, text)
 import Task
 import Time
 
@@ -134,12 +136,43 @@ prettyHMS { hour, minute, second } =
         |> List.foldr (++) ""
 
 
+timeContainer : List (Attribute msg) -> List (Html msg) -> Html msg
+timeContainer =
+    styled div
+        [ displayFlex
+        , justifyContent center
+        , alignItems center
+        , height (vh 100)
+        ]
+
+
+timeText : List (Attribute msg) -> List (Html msg) -> Html msg
+timeText =
+    styled p
+        [ fontSize (em 10)
+        , color (hex "434445")
+        ]
+
+
+mainView : Model -> Html Msg
+mainView { currentTime, eventTime } =
+    timeContainer []
+        [ timeText []
+            [ text (prettyHMS (timeLeft currentTime eventTime))
+            ]
+        ]
+
+
+globalStyle : Html Msg
+globalStyle =
+    global [ body [ margin zero ] ]
+
+
 view : Model -> Document Msg
-view { zone, currentTime, eventTime } =
+view model =
     { title = "Gong timer!"
     , body =
-        [ Html.div [] [ text (prettyHMS (timeLeft currentTime eventTime)) ]
-        ]
+        List.map Html.Styled.toUnstyled [ globalStyle, mainView model ]
     }
 
 
