@@ -131,7 +131,7 @@ timeLeft currentTime targetTime =
 prettyHMS : HMS -> String
 prettyHMS { hour, minute, second } =
     [ hour, minute, second ]
-        |> List.map String.fromInt
+        |> List.map (String.fromInt >> String.padLeft 2 '0')
         |> List.intersperse ":"
         |> List.foldr (++) ""
 
