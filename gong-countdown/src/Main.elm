@@ -1,24 +1,18 @@
-module Main exposing (Model, initialModel, main)
+module Main exposing (main)
 
 import Browser exposing (Document)
 import Css exposing (..)
 import Css.Global exposing (body, global)
+import DayTime exposing (DayTime, HMS)
 import Html.Styled exposing (Attribute, Html, div, p, styled, text)
 import Task
 import Time
 
 
 type alias Model =
-    { currentTime : HMS
+    { now : DayTime
     , zone : Time.Zone
-    , eventTime : HMS
-    }
-
-
-type alias HMS =
-    { hour : Int
-    , minute : Int
-    , second : Int
+    , event : DayTime
     }
 
 
@@ -27,26 +21,11 @@ type Msg
     | AdjustTimeZone Time.Zone
 
 
-posixToHMS : Time.Zone -> Time.Posix -> HMS
-posixToHMS zone time =
-    let
-        h =
-            Time.toHour zone time
-
-        m =
-            Time.toMinute zone time
-
-        s =
-            Time.toSecond zone time
-    in
-    HMS h m s
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick time ->
-            ( { model | currentTime = posixToHMS model.zone time }, Cmd.none )
+            ( { model | now = DayTime.posixToDayTime model.zone time }, Cmd.none )
 
         AdjustTimeZone zone ->
             ( { model | zone = zone }, Cmd.none )
@@ -54,9 +33,9 @@ update msg model =
 
 initialModel : () -> ( Model, Cmd Msg )
 initialModel flags =
-    ( { currentTime = HMS 0 0 0
+    ( { now = DayTime Time.Sun (HMS 0 0 0)
       , zone = Time.utc
-      , eventTime = HMS 16 0 0
+      , event = DayTime Time.Fri (HMS 16 0 0)
       }
     , Cmd.batch
         [ Task.perform Tick Time.now
@@ -65,75 +44,21 @@ initialModel flags =
     )
 
 
-prettyDate : Time.Zone -> Time.Posix -> String
-prettyDate zone time =
+getMessage : Model -> String
+getMessage { now, event, zone } =
     let
-        m =
-            time
-                |> Time.toMinute zone
-                |> String.fromInt
-
-        h =
-            time
-                |> Time.toHour zone
-                |> String.fromInt
+        timeLeftHMS =
+            DayTime.diffHMS now.time event.time
     in
-    h ++ ":" ++ m
+    if now.day == event.day then
+        if timeLeftHMS.hour > event.time.hour then
+            "Generic message about event!"
 
-
-normaliseTime : Int -> Int -> Int
-normaliseTime max value =
-    if value < 0 then
-        max + value
+        else
+            DayTime.prettyHMS timeLeftHMS
 
     else
-        value
-
-
-timeLeft : HMS -> HMS -> HMS
-timeLeft currentTime targetTime =
-    let
-        s =
-            targetTime.second - currentTime.second
-
-        normalizedSecond =
-            normaliseTime 60 s
-
-        m =
-            targetTime.minute
-                - currentTime.minute
-                - (if s < 0 then
-                    1
-
-                   else
-                    0
-                  )
-
-        normalizedMinute =
-            normaliseTime 60 m
-
-        h =
-            targetTime.hour
-                - currentTime.hour
-                - (if m < 0 then
-                    1
-
-                   else
-                    0
-                  )
-
-        normalizedHour =
-            normaliseTime 24 h
-    in
-    HMS normalizedHour normalizedMinute normalizedSecond
-
-
-prettyHMS : HMS -> String
-prettyHMS { hour, minute, second } =
-    [ hour, minute, second ]
-        |> List.map (String.fromInt >> String.padLeft 2 '0')
-        |> List.intersperse ":"
-        |> List.foldr (++) ""
+        DayTime.prettyHMS now.time
 
 
 timeContainer : List (Attribute msg) -> List (Html msg) -> Html msg
@@ -151,14 +76,16 @@ timeText =
     styled p
         [ fontSize (em 10)
         , color (hex "434445")
+        , padding (em 1)
+        , textAlign center
         ]
 
 
 mainView : Model -> Html Msg
-mainView { currentTime, eventTime } =
+mainView model =
     timeContainer []
         [ timeText []
-            [ text (prettyHMS (timeLeft currentTime eventTime))
+            [ text (getMessage model)
             ]
         ]
 
