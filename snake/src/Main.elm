@@ -12,8 +12,20 @@ import Svg.Attributes exposing (..)
 import Time
 
 
-grid =
-    Matrix.repeat 20 20 0
+cellWidth =
+    20
+
+
+cellHeight =
+    20
+
+
+gridWidthCells =
+    20
+
+
+gridHeightCells =
+    20
 
 
 type alias Position =
@@ -252,9 +264,13 @@ toDirection string =
             Noop
 
 
-viewGrid : Int -> Int -> Int -> Html Msg
-viewGrid row col content =
-    viewRect "white" row col
+gameGrid : List (Html Msg)
+gameGrid =
+    Matrix.indexedMap
+        (\row col _ -> viewRect "white" row col)
+        (Matrix.repeat gridWidthCells gridHeightCells 0)
+        |> Matrix.toArray
+        |> Array.toList
 
 
 viewSnake : Snake -> List (Html Msg)
@@ -279,10 +295,10 @@ viewApple apple =
 viewRect : String -> Int -> Int -> Html Msg
 viewRect fillColor row col =
     rect
-        [ x (String.fromInt (row * 20))
-        , y (String.fromInt (col * 20))
-        , width "20"
-        , height "20"
+        [ x (String.fromInt (row * cellWidth))
+        , y (String.fromInt (col * cellHeight))
+        , width (String.fromInt cellWidth)
+        , height (String.fromInt cellHeight)
         , stroke "black"
         , fill fillColor
         ]
@@ -305,11 +321,7 @@ view model =
             [ width "800", height "800", viewBox "0 0 800 800" ]
           <|
             List.concat
-                [ Matrix.indexedMap
-                    viewGrid
-                    grid
-                    |> Matrix.toArray
-                    |> Array.toList
+                [ gameGrid
                 , viewSnake
                     model.snake
                 , viewApple model.apple
