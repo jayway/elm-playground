@@ -3,7 +3,7 @@ module Main exposing (Model, init)
 import Array
 import Browser
 import Browser.Events as Events
-import Html exposing (Html)
+import Html exposing (Html, div)
 import Json.Decode as D
 import Matrix
 import Svg exposing (..)
@@ -35,6 +35,7 @@ type alias Snake =
 
 type alias Model =
     { snake : Snake
+    , gameOver : Bool
     }
 
 
@@ -48,9 +49,10 @@ init : () -> ( Model, Cmd msg )
 init _ =
     ( { snake =
             { head = Position 10 10
-            , tail = [ Position 10 11 ]
-            , direction = Down
+            , tail = [ Position 10 11, Position 10 12, Position 10 13, Position 10 14, Position 10 15, Position 10 16 ]
+            , direction = Up
             }
+      , gameOver = False
       }
     , Cmd.none
     )
@@ -60,7 +62,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick time ->
-            ( { model | snake = updateSnakePosition model.snake }, Cmd.none )
+            updateTick model
 
         KeyPress direction ->
             ( { model | snake = updateSnakeDirection model.snake direction }, Cmd.none )
@@ -113,6 +115,21 @@ updateSnakeDirection snake newDirection =
         snake
 
 
+updateTick : Model -> ( Model, Cmd Msg )
+updateTick model =
+    let
+        newSnake =
+            updateSnakePosition model.snake
+
+        hasTailCollision =
+            hasCollision newSnake.head newSnake.tail
+
+        newModel =
+            { model | snake = newSnake, gameOver = hasTailCollision }
+    in
+    ( newModel, Cmd.none )
+
+
 updateSnakePosition : Snake -> Snake
 updateSnakePosition snake =
     let
@@ -129,6 +146,16 @@ updateSnakePosition snake =
             updateSnakeHead direction head
     in
     { snake | head = newHead, tail = newTail }
+
+
+hasCollision : Position -> List Position -> Bool
+hasCollision head positions =
+    List.any (isPositionEqual head) positions
+
+
+isPositionEqual : Position -> Position -> Bool
+isPositionEqual p1 p2 =
+    p1.x == p2.x && p1.y == p2.y
 
 
 updateSnakeHead : Direction -> Position -> Position
@@ -153,10 +180,14 @@ updateSnakeHead direction position =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ Time.every 100 Tick
-        , Events.onKeyDown keyDecoder
-        ]
+    if not model.gameOver then
+        Sub.batch
+            [ Time.every 100 Tick
+            , Events.onKeyDown keyDecoder
+            ]
+
+    else
+        Sub.none
 
 
 keyDecoder : D.Decoder Msg
@@ -212,19 +243,30 @@ viewRect fillColor row col =
 
 view : Model -> Html Msg
 view model =
-    svg
-        [ width "800", height "800", viewBox "0 0 800 800" ]
-    <|
-        List.append
-            (Matrix.indexedMap
-                viewGrid
-                grid
-                |> Matrix.toArray
-                |> Array.toList
-            )
-            (viewSnake
-                model.snake
-            )
+    div []
+        [ div []
+            [ text
+                (if model.gameOver then
+                    "Game over"
+
+                 else
+                    " "
+                )
+            ]
+        , svg
+            [ width "800", height "800", viewBox "0 0 800 800" ]
+          <|
+            List.append
+                (Matrix.indexedMap
+                    viewGrid
+                    grid
+                    |> Matrix.toArray
+                    |> Array.toList
+                )
+                (viewSnake
+                    model.snake
+                )
+        ]
 
 
 main =
