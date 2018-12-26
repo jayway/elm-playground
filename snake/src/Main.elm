@@ -6,6 +6,7 @@ import Browser.Events as Events
 import Html exposing (Html, div)
 import Json.Decode as D
 import Matrix
+import Random
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
@@ -33,28 +34,35 @@ type alias Snake =
     }
 
 
+type alias Apple =
+    Maybe Position
+
+
 type alias Model =
     { snake : Snake
     , gameOver : Bool
+    , apple : Apple
     }
 
 
 type Msg
     = Tick Time.Posix
     | KeyPress Direction
+    | PlaceApple ( Int, Int )
     | Noop
 
 
-init : () -> ( Model, Cmd msg )
+init : () -> ( Model, Cmd Msg )
 init _ =
     ( { snake =
             { head = Position 10 10
-            , tail = [ Position 10 11, Position 10 12, Position 10 13, Position 10 14, Position 10 15, Position 10 16 ]
+            , tail = [ Position 10 11, Position 10 12, Position 10 13 ]
             , direction = Up
             }
       , gameOver = False
+      , apple = Nothing
       }
-    , Cmd.none
+    , Random.generate PlaceApple randomPosition
     )
 
 
@@ -66,6 +74,9 @@ update msg model =
 
         KeyPress direction ->
             ( { model | snake = updateSnakeDirection model.snake direction }, Cmd.none )
+
+        PlaceApple ( row, col ) ->
+            ( { model | apple = Just (Position row col) }, Cmd.none )
 
         Noop ->
             ( model, Cmd.none )
@@ -118,48 +129,51 @@ updateSnakeDirection snake newDirection =
 updateTick : Model -> ( Model, Cmd Msg )
 updateTick model =
     let
-        newSnake =
-            updateSnakePosition model.snake
+        { snake, apple } =
+            model
+
+        nextHead =
+            getNextHead snake.direction snake.head
+
+        ateApple =
+            case apple of
+                Just position ->
+                    isPositionEqual nextHead position
+
+                Nothing ->
+                    False
+
+        nextTail =
+            getNextTail snake ateApple
+
+        nextSnake =
+            Snake nextHead nextTail snake.direction
 
         hasTailCollision =
-            hasCollision newSnake.head newSnake.tail
+            hasCollision nextSnake.head nextSnake.tail
 
-        newModel =
-            { model | snake = newSnake, gameOver = hasTailCollision }
+        nextApple =
+            if ateApple then
+                Nothing
+
+            else
+                apple
+
+        nextCmd =
+            if ateApple then
+                Random.generate PlaceApple randomPosition
+
+            else
+                Cmd.none
+
+        nextModel =
+            { model | snake = nextSnake, gameOver = hasTailCollision, apple = nextApple }
     in
-    ( newModel, Cmd.none )
+    ( nextModel, nextCmd )
 
 
-updateSnakePosition : Snake -> Snake
-updateSnakePosition snake =
-    let
-        { head, tail, direction } =
-            snake
-
-        tailLength =
-            List.length tail
-
-        newTail =
-            head :: List.take (tailLength - 1) tail
-
-        newHead =
-            updateSnakeHead direction head
-    in
-    { snake | head = newHead, tail = newTail }
-
-
-hasCollision : Position -> List Position -> Bool
-hasCollision head positions =
-    List.any (isPositionEqual head) positions
-
-
-isPositionEqual : Position -> Position -> Bool
-isPositionEqual p1 p2 =
-    p1.x == p2.x && p1.y == p2.y
-
-
-updateSnakeHead : Direction -> Position -> Position
-updateSnakeHead direction position =
+getNextHead : Direction -> Position -> Position
+getNextHead direction position =
     let
         { x, y } =
             position
@@ -176,6 +190,30 @@ updateSnakeHead direction position =
 
         Right ->
             { position | x = wrap (x + 1) }
+
+
+getNextTail : Snake -> Bool -> List Position
+getNextTail { head, tail } ateApple =
+    if ateApple then
+        head :: tail
+
+    else
+        head :: List.take (List.length tail - 1) tail
+
+
+hasCollision : Position -> List Position -> Bool
+hasCollision head positions =
+    List.any (isPositionEqual head) positions
+
+
+isPositionEqual : Position -> Position -> Bool
+isPositionEqual p1 p2 =
+    p1.x == p2.x && p1.y == p2.y
+
+
+randomPosition : Random.Generator ( Int, Int )
+randomPosition =
+    Random.pair (Random.int 0 19) (Random.int 0 19)
 
 
 subscriptions : Model -> Sub Msg
@@ -228,6 +266,16 @@ viewSnake { head, tail } =
     List.map (\p -> viewRect "black" p.x p.y) positions
 
 
+viewApple : Apple -> List (Html Msg)
+viewApple apple =
+    case apple of
+        Just pos ->
+            [ viewRect "red" pos.x pos.y ]
+
+        Nothing ->
+            []
+
+
 viewRect : String -> Int -> Int -> Html Msg
 viewRect fillColor row col =
     rect
@@ -256,16 +304,16 @@ view model =
         , svg
             [ width "800", height "800", viewBox "0 0 800 800" ]
           <|
-            List.append
-                (Matrix.indexedMap
+            List.concat
+                [ Matrix.indexedMap
                     viewGrid
                     grid
                     |> Matrix.toArray
                     |> Array.toList
-                )
-                (viewSnake
+                , viewSnake
                     model.snake
-                )
+                , viewApple model.apple
+                ]
         ]
 
 
