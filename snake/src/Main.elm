@@ -70,6 +70,7 @@ type alias Model =
     { snake : Snake
     , gameOver : Bool
     , apple : Apple
+    , keyPressHandled : Bool
     }
 
 
@@ -92,6 +93,7 @@ init _ =
     ( { snake = snake
       , gameOver = False
       , apple = Nothing
+      , keyPressHandled = True
       }
     , Random.generate PlaceApple (randomValidPosition (snake.head :: snake.tail))
     )
@@ -104,7 +106,11 @@ update msg model =
             updateTick model
 
         KeyPress direction ->
-            ( { model | snake = updateSnakeDirection model.snake direction }, Cmd.none )
+            if model.keyPressHandled then
+                ( { model | snake = updateSnakeDirection model.snake direction, keyPressHandled = False }, Cmd.none )
+
+            else
+                ( model, Cmd.none )
 
         PlaceApple apple ->
             ( { model | apple = apple }, Cmd.none )
@@ -198,7 +204,7 @@ updateTick model =
                 Cmd.none
 
         nextModel =
-            { model | snake = nextSnake, gameOver = hasTailCollision, apple = nextApple }
+            { model | snake = nextSnake, gameOver = hasTailCollision, apple = nextApple, keyPressHandled = True }
     in
     ( nextModel, nextCmd )
 
