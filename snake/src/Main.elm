@@ -5,7 +5,6 @@ import Browser
 import Browser.Events as Events
 import Html exposing (Html, div)
 import Json.Decode as D
-import Matrix
 import Random
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
@@ -26,6 +25,22 @@ gridWidthCells =
 
 gridHeightCells =
     20
+
+
+gamePositions =
+    -- Game position matrix in row major order
+    List.range 0 (gridWidthCells * gridHeightCells - 1)
+        |> List.map
+            (\index ->
+                let
+                    row =
+                        index // gridWidthCells
+
+                    col =
+                        index - (row * gridHeightCells)
+                in
+                Position row col
+            )
 
 
 type alias Position =
@@ -266,11 +281,7 @@ toDirection string =
 
 gameGrid : List (Html Msg)
 gameGrid =
-    Matrix.indexedMap
-        (\row col _ -> viewRect "white" row col)
-        (Matrix.repeat gridWidthCells gridHeightCells 0)
-        |> Matrix.toArray
-        |> Array.toList
+    List.map (\p -> viewRect "white" p.x p.y) gamePositions
 
 
 viewSnake : Snake -> List (Html Msg)
