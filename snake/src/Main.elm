@@ -3,12 +3,13 @@ module Main exposing (Model, init)
 import Array
 import Browser
 import Browser.Events as Events
-import Html exposing (Html, div)
+import Html exposing (Html, div, text)
+import Html.Attributes as HtmlA
 import Json.Decode as D
 import Random
 import Set
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
+import Svg
+import Svg.Attributes as SvgA
 import Time
 
 
@@ -71,6 +72,7 @@ type alias Model =
     , gameOver : Bool
     , apple : Apple
     , keyPressHandled : Bool
+    , score : Int
     }
 
 
@@ -94,6 +96,7 @@ init _ =
       , gameOver = False
       , apple = Nothing
       , keyPressHandled = True
+      , score = 0
       }
     , Random.generate PlaceApple (randomValidPosition (snake.head :: snake.tail))
     )
@@ -203,8 +206,21 @@ updateTick model =
             else
                 Cmd.none
 
+        nextScore =
+            if ateApple then
+                model.score + 1
+
+            else
+                model.score
+
         nextModel =
-            { model | snake = nextSnake, gameOver = hasTailCollision, apple = nextApple, keyPressHandled = True }
+            { model
+                | snake = nextSnake
+                , gameOver = hasTailCollision
+                , apple = nextApple
+                , keyPressHandled = True
+                , score = nextScore
+            }
     in
     ( nextModel, nextCmd )
 
@@ -279,7 +295,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     if not model.gameOver then
         Sub.batch
-            [ Time.every 100 Tick
+            [ Time.every 75 Tick
             , Events.onKeyDown keyDecoder
             ]
 
@@ -311,18 +327,13 @@ toDirection string =
             Noop
 
 
-gameGrid : List (Html Msg)
-gameGrid =
-    List.map (\p -> viewRect "white" p.x p.y) gamePositions
-
-
 viewSnake : Snake -> List (Html Msg)
 viewSnake { head, tail } =
     let
         positions =
             head :: tail
     in
-    List.map (\p -> viewRect "black" p.x p.y) positions
+    List.map (\p -> viewRect "mediumseagreen" p.x p.y) positions
 
 
 viewApple : Apple -> List (Html Msg)
@@ -337,37 +348,64 @@ viewApple apple =
 
 viewRect : String -> Int -> Int -> Html Msg
 viewRect fillColor row col =
-    rect
-        [ x (String.fromInt (row * cellWidth))
-        , y (String.fromInt (col * cellHeight))
-        , width (String.fromInt cellWidth)
-        , height (String.fromInt cellHeight)
-        , stroke "black"
-        , fill fillColor
+    Svg.rect
+        [ SvgA.x (String.fromInt (row * cellWidth))
+        , SvgA.y (String.fromInt (col * cellHeight))
+        , SvgA.width (String.fromInt cellWidth)
+        , SvgA.height (String.fromInt cellHeight)
+        , SvgA.fill fillColor
         ]
         []
+
+
+viewGameOver : Html Msg
+viewGameOver =
+    Svg.text_
+        [ SvgA.x "50%"
+        , SvgA.y "50%"
+        , SvgA.textAnchor "middle"
+        , SvgA.alignmentBaseline "middle"
+        , SvgA.fontSize "50"
+        , SvgA.fontWeight "bold"
+        , SvgA.fill "LightCoral"
+        ]
+        [ Svg.text "Game Over!" ]
+
+
+viewTopBar : Model -> Html Msg
+viewTopBar model =
+    div
+        [ HtmlA.style "width" "400px"
+        , HtmlA.style "background" "tomato"
+        , HtmlA.style "color" "white"
+        , HtmlA.style "padding" "10px"
+        , HtmlA.style "box-sizing" "border-box"
+        ]
+        [ div [] [ text ("Score: " ++ String.fromInt model.score) ]
+        ]
 
 
 view : Model -> Html Msg
 view model =
     div []
-        [ div []
-            [ text
-                (if model.gameOver then
-                    "Game over"
-
-                 else
-                    " "
-                )
+        [ viewTopBar model
+        , Svg.svg
+            [ SvgA.width "400"
+            , SvgA.height "400"
+            , SvgA.viewBox "0 0 400 400"
+            , HtmlA.style "background" "black"
             ]
-        , svg
-            [ width "800", height "800", viewBox "0 0 800 800" ]
           <|
             List.concat
-                [ gameGrid
-                , viewSnake
+                [ viewSnake
                     model.snake
                 , viewApple model.apple
+                , [ if model.gameOver then
+                        viewGameOver
+
+                    else
+                        Svg.text ""
+                  ]
                 ]
         ]
 
