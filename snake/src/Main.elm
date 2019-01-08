@@ -6,6 +6,7 @@ import Browser.Events as Events
 import Html exposing (Html, div)
 import Json.Decode as D
 import Random
+import Set
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
@@ -75,21 +76,24 @@ type alias Model =
 type Msg
     = Tick Time.Posix
     | KeyPress Direction
-    | PlaceApple ( Int, Int )
+    | PlaceApple Apple
     | Noop
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { snake =
+    let
+        snake =
             { head = Position 10 10
             , tail = [ Position 10 11, Position 10 12, Position 10 13 ]
             , direction = Up
             }
+    in
+    ( { snake = snake
       , gameOver = False
       , apple = Nothing
       }
-    , Random.generate PlaceApple randomPosition
+    , Random.generate PlaceApple (randomValidPosition (snake.head :: snake.tail))
     )
 
 
@@ -102,8 +106,8 @@ update msg model =
         KeyPress direction ->
             ( { model | snake = updateSnakeDirection model.snake direction }, Cmd.none )
 
-        PlaceApple ( row, col ) ->
-            ( { model | apple = Just (Position row col) }, Cmd.none )
+        PlaceApple apple ->
+            ( { model | apple = apple }, Cmd.none )
 
         Noop ->
             ( model, Cmd.none )
@@ -188,7 +192,7 @@ updateTick model =
 
         nextCmd =
             if ateApple then
-                Random.generate PlaceApple randomPosition
+                Random.generate PlaceApple (randomValidPosition (nextSnake.head :: nextSnake.tail))
 
             else
                 Cmd.none
@@ -238,9 +242,31 @@ isPositionEqual p1 p2 =
     p1.x == p2.x && p1.y == p2.y
 
 
-randomPosition : Random.Generator ( Int, Int )
-randomPosition =
-    Random.pair (Random.int 0 19) (Random.int 0 19)
+positionToString : Position -> String
+positionToString { x, y } =
+    String.fromInt x ++ String.fromInt y
+
+
+randomValidPosition : List Position -> Random.Generator (Maybe Position)
+randomValidPosition invalidPositions =
+    -- Might be some better way to do the filtering
+    -- Elm doesn't suppoer custom comparables so can't do
+    -- Set.diff (Set.fromList gamePositions) (Set.fromList invalidPositions) |> Set.toList
+    let
+        invalidSet =
+            invalidPositions |> List.map positionToString |> Set.fromList
+
+        validPositions =
+            gamePositions
+                |> List.filter (\p -> not <| Set.member (positionToString p) invalidSet)
+                |> List.map (\p -> Just p)
+    in
+    case validPositions of
+        [] ->
+            Random.constant Nothing
+
+        head :: tail ->
+            Random.uniform head tail
 
 
 subscriptions : Model -> Sub Msg
