@@ -4,7 +4,8 @@ import Browser exposing (Document)
 import Css exposing (..)
 import Css.Global exposing (body, global)
 import DayTime exposing (DayTime, HMS)
-import Html.Styled exposing (Attribute, Html, div, p, styled, text)
+import Html.Styled exposing (Attribute, Html, div, img, p, styled, text)
+import Html.Styled.Attributes exposing (src)
 import Task
 import Time
 
@@ -95,11 +96,16 @@ globalStyle =
     global [ body [ margin zero ] ]
 
 
+logo : Html Msg
+logo =
+    styled img [ position absolute, height (px 150), bottom (px 0), margin (px 50), right (px 0) ] [ src "jaydevo.png" ] []
+
+
 view : Model -> Document Msg
 view model =
     { title = "Gong timer!"
     , body =
-        List.map Html.Styled.toUnstyled [ globalStyle, mainView model ]
+        List.map Html.Styled.toUnstyled [ globalStyle, mainView model, logo ]
     }
 
 
