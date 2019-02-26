@@ -1,4 +1,4 @@
-module DayTime exposing (DayTime, HMS, diffHMS, posixToDayTime, posixToHMS, prettyHMS)
+module DayTime exposing (HMS, diffHMS, posixToDayTime, posixToHMS, prettyHMS)
 
 import Time
 
@@ -7,12 +7,6 @@ type alias HMS =
     { hour : Int
     , minute : Int
     , second : Int
-    }
-
-
-type alias DayTime =
-    { day : Time.Weekday
-    , time : HMS
     }
 
 
@@ -31,9 +25,9 @@ posixToHMS zone time =
     HMS h m s
 
 
-posixToDayTime : Time.Zone -> Time.Posix -> DayTime
+posixToDayTime : Time.Zone -> Time.Posix -> HMS
 posixToDayTime zone time =
-    DayTime (Time.toWeekday zone time) (posixToHMS zone time)
+    posixToHMS zone time
 
 
 diffHMS : HMS -> HMS -> HMS
