@@ -139,11 +139,21 @@ logo =
     styled img [ position absolute, height (px 150), bottom (px 0), margin (px 50), right (px 0) ] [ src "jaydevo.png" ] []
 
 
+gong : Html Msg
+gong =
+    styled img [ position absolute, height (px 300), bottom (px 0), margin (px 50), left (px 0) ] [ src "gong.png" ] []
+
+
+stick : Html Msg
+stick =
+    styled img [ position absolute, height (px 150), bottom (px 0), margin (px 50), left (px 100) ] [ src "stick.png" ] []
+
+
 view : Model -> Document Msg
 view model =
     { title = "Gong timer!"
     , body =
-        List.map Html.Styled.toUnstyled [ globalStyle, mainView model, logo ]
+        List.map Html.Styled.toUnstyled [ globalStyle, mainView model, logo, gong, stick ]
     }
 
 
