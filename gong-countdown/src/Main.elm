@@ -65,7 +65,7 @@ type alias ParsedQuery =
 
 messageParser : Parser String
 messageParser =
-    Query.map (Maybe.withDefault "nonsense") (Query.string "message")
+    Query.map (Maybe.withDefault "Come up to the 5th floor for some event! (This is a default message since someone forgot to configure this :O)") (Query.string "message")
 
 
 intParser : Int -> String -> Parser Int
@@ -81,10 +81,6 @@ parser =
 parseUrl : Url -> Maybe ParsedQuery
 parseUrl url =
     Url.Parser.parse (Url.Parser.query parser) url
-
-
-
--- ?message="Ber"&hour=16&minute=00
 
 
 getMessage : Model -> String
